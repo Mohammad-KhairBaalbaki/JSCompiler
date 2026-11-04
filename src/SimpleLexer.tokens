@@ -1,0 +1,12 @@
+GREETING=1
+IF=2
+ELSE=3
+ID=4
+NUM=5
+ASSIGN=6
+PLUS=7
+WS=8
+'if'=2
+'else'=3
+'='=6
+'+'=7
