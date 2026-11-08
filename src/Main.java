@@ -29,6 +29,8 @@ public class Main {
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         tokens.fill();
 
+        List<String> errors = new ArrayList<>(errorListener.getErrors());
+
         // --- طباعة التوكنز ---
         System.out.println("--- Tokens Found ---");
 
@@ -41,13 +43,26 @@ public class Main {
             int    line      = token.getLine();
             int    col       = token.getCharPositionInLine() + 1; // +1 عشان يبدأ من 1
 
+            String errorMessage = switch (token.getType()) {
+                case JSLexer.UNTERMINATED_STRING -> "Unterminated string";
+                case JSLexer.UNTERMINATED_TEMPLATE -> "Unterminated template literal";
+                case JSLexer.UNTERMINATED_COMMENT -> "Unterminated comment";
+                case JSLexer.MALFORMED_NUMBER -> "Malformed number";
+                case JSLexer.UNKNOWN -> "Unknown character";
+                default -> null;
+            };
+            if (errorMessage != null) {
+                String errorText = text.replace("\r", "\\r").replace("\n", "\\n");
+                errors.add(String.format("Error at %d:%d  %s: %s",
+                        line, col, errorMessage, errorText));
+            }
+
             // طباعة بالصيغة المطلوبة: [النص] Type: النوع  (سطر:عمود)
             System.out.printf("[%-20s] Type: %-25s (%d:%d)%n",
                     text, tokenName, line, col);
         }
 
         // --- طباعة الأخطاء ---
-        List<String> errors = errorListener.getErrors();
         System.out.println("\n--- Lexical Errors: " + errors.size() + " ---");
         for (String err : errors) {
             System.out.println(err);

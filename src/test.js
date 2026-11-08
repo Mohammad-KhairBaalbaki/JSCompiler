@@ -1,198 +1,174 @@
-// ===== اختبار شامل لكل أنواع التوكنز =====
+#!/usr/bin/env node
+// ==============================================================================
+// ملف اختبار شامل للمحلل اللفظي (JavaScript ECMAScript 2025 Lexer - ANTLR4)
+// يغطي جميع الحالات الثمانية المطلوبة + الحالات الخاصة + الأخطاء المعجمية بدقة
+// ==============================================================================
 
-// 1. Variable Declarations
-var x = 10;
-let name = "Ahmad";
-const PI = 3.14;
+// ------------------------------------------------------------------------------
+// 1. الكلمات المحجوزة ومحددات المتغيرات (Reserved Keywords & Variables)
+// ------------------------------------------------------------------------------
+var myVar = 10;
+let userCount = 20;
+const MAX_LIMIT = 100;
 
-// 2. Numbers - كل الأنواع
-var dec     = 42;
-var dec2    = 1_000_000;
-var float1  = 3.14;
-var float2  = .5;
-var float3  = 1e10;
-var float4  = 1.5e-3;
-var hex     = 0xFF;
-var hex2    = 0xA0_B0;
-var octal   = 0o777;
-var binary  = 0b1010;
-var big1    = 123n;
-var big2    = 0xFFn;
-
-// 3. Strings - الحالات الخاصة
-var s1 = "hello world";
-var s2 = 'single quotes';
-var s3 = "say \"hi\" to him";       // escape داخل double
-var s4 = 'it\'s a beautiful day';   // escape داخل single
-var s5 = 'it has "double" inside';  // double داخل single بدون escape
-var s6 = "it has 'single' inside";  // single داخل double بدون escape
-var s7 = "line1\
-line2";                              // line continuation
-var s8 = "tab:\there  newline:\n";  // escape sequences
-
-// 4. Template Literals
-var t1 = `simple template`;
-var t2 = `hello ${name}!`;
-var t3 = `multi
-line
-template`;
-var t4 = `${1 + 2} result`;
-
-// 5. Booleans & Null
-var b1 = true;
-var b2 = false;
-var n1 = null;
-
-// 6. Operators - كل الأنواع
-var a = 5 + 3;
-var b = 10 - 2;
-var c = 4 * 3;
-var d = 8 / 2;
-var e = 7 % 3;
-var f = 2 ** 10;
-
-// Comparison
-var r1 = a == b;
-var r2 = a === b;
-var r3 = a != b;
-var r4 = a !== b;
-var r5 = a > b;
-var r6 = a < b;
-var r7 = a >= b;
-var r8 = a <= b;
-
-// Logical
-var l1 = true && false;
-var l2 = true || false;
-var l3 = !true;
-var l4 = a ?? b;
-
-// Bitwise
-var bw1 = a & b;
-var bw2 = a | b;
-var bw3 = a ^ b;
-var bw4 = ~a;
-var bw5 = a << 2;
-var bw6 = a >> 2;
-var bw7 = a >>> 2;
-
-// Assignment
-x += 5;
-x -= 3;
-x *= 2;
-x /= 4;
-x %= 3;
-x **= 2;
-x &&= true;
-x ||= false;
-x ??= 0;
-
-// Increment / Decrement
-x++;
-x--;
-++x;
---x;
-
-// 7. Control Flow
-if (x > 0) {
-    console.log("positive");
-} else if (x < 0) {
-    console.log("negative");
+if (userCount < MAX_LIMIT) {
+    while (userCount > 0) {
+        userCount--;
+        break;
+    }
 } else {
-    console.log("zero");
+    for (let i = 0; i < 5; i++) {
+        continue;
+    }
 }
 
-for (let i = 0; i < 10; i++) {
-    if (i === 5) break;
-    if (i === 3) continue;
+async function fetchData(url) {
+    try {
+        await Promise.resolve(url);
+        return true;
+    } catch (err) {
+        throw err;
+    } finally {
+        // تنظيف الموارد
+    }
 }
 
-while (x > 0) {
-    x--;
-}
-
-do {
-    x++;
-} while (x < 5);
-
-switch (x) {
-    case 1:
-        break;
-    case 2:
-        break;
-    default:
-        break;
-}
-
-// 8. Functions
-function greet(name) {
-    return "Hello " + name;
-}
-
-const add = (a, b) => a + b;
-
-async function fetchData() {
-    const result = await fetch("url");
-    return result;
-}
-
-function* generator() {
-    yield 1;
-    yield 2;
-}
-
-// 9. Classes
-class Animal extends Object {
-    #privateField = "secret";
-
+class Animal {
+    #privateField = 42; // Private Identifier (#)
     constructor(name) {
-        super();
         this.name = name;
     }
-
     static create() {
-        return new Animal("cat");
+        return new Animal("default");
     }
 }
 
-// 10. Error Handling
-try {
-    throw new Error("oops");
-} catch (err) {
-    console.log(err);
-} finally {
-    console.log("done");
-}
+// ------------------------------------------------------------------------------
+// 2. القيم المنطقية و null و undefined (Booleans & Literals)
+// ------------------------------------------------------------------------------
+let isAvailable = true;
+let isFinished = false;
+let emptyRef = null;
+let notAssigned = undefined;
 
-// 11. Modules
-import { something } from 'module';
-export default function() {}
+// ------------------------------------------------------------------------------
+// 3. الأرقام بجميع صيغها الخمس المطلوبة (Numbers)
+// ------------------------------------------------------------------------------
+// أ. الأعداد الصحيحة (INTEGER) مع دعم الفاصل الرقمي _
+let int1 = 0;
+let int2 = 42;
+let int3 = 1_000_000;
 
-// 12. Special Operators
-var obj = { a: 1, b: 2 };
-var copy = { ...obj };          // spread
-var [first, ...rest] = [1,2,3]; // destructuring + rest
-var chain = obj?.a;             // optional chaining
-var type1 = typeof x;
-var type2 = x instanceof Animal;
-void 0;
-delete obj.a;
-var ternary = x > 0 ? "yes" : "no";
+// ب. الأعداد العشرية والأسية (FLOAT)
+let float1 = 3.14159;
+let float2 = .5;
+let float3 = 5.;
+let float4 = 1.5e3;
+let float5 = 2E-4;
+let float6 = 1_000.50_25;
 
-// 13. Multi-line comment
+// ج. الست عشري (HEX_NUMBER)
+let hex1 = 0x1A;
+let hex2 = 0XFF_00;
+
+// د. الثماني (OCTAL_NUMBER)
+let oct1 = 0o755;
+let oct2 = 0O17;
+
+// هـ. الأعداد الكبيرة (BIGINT)
+let big1 = 9007199254740991n;
+let big2 = 0x1ffn;
+let big3 = 0o77n;
+let big4 = 0b101n;
+
+// و. الثنائي (BINARY_NUMBER)
+let bin1 = 0b1010;
+let bin2 = 0B1100_0011;
+
+// ------------------------------------------------------------------------------
+// 4. العمليات وعلامات الترقيم (Operators & Punctuation)
+// ------------------------------------------------------------------------------
+let mathOp = (10 + 5 - 2) * (8 / 4) % 3 ** 2;
+let compareOp = (10 === 10) && (5 !== 6) || (3 <= 4) && !(2 > 1);
+let bitwiseOp = (5 & 3) | (2 ^ 1) ~ 0;
+let shiftOp = (8 << 1) + (16 >> 2) + (-8 >>> 1);
+
+// عمليات الإسناد المركبة المتقدمة
+let x = 10;
+x += 5;
+x -= 2;
+x *= 3;
+x /= 2;
+x %= 4;
+x **= 2;
+x <<= 1;
+x >>= 1;
+x >>>= 1;
+x &= 1;
+x |= 2;
+x ^= 3;
+x &&= true;
+x ||= false;
+x ??= 100; // Nullish coalescing assignment
+
+let optionalVal = user?.profile?.name; // Optional Chaining
+let spreadArray = [...[1, 2, 3]];       // Spread / Ellipsis
+
+// ------------------------------------------------------------------------------
+// 5. الحالات الخاصة للنصوص (Special String Cases)
+// ------------------------------------------------------------------------------
+
+// الحالة أ: نص مفرد يحوي علامات تنصيص مزدوجة ومحارف هروب
+var a = 'It\'s a "beautiful" day';
+
+// الحالة ب: نص مزدوج يحوي علامات تنصيص مفردة ومحارف هروب
+var b = "She said: \"It's raining outside!\"";
+
+// الحالة ج: نص يمتد على عدة أسطر باستخدام Line Continuation (\ + newline)
+var c = "abc\
+def\
+ghi";
+
+var c_single = 'first line\
+second line';
+
+// الحالة د: نصوص على عدة أسطر باستخدام Backtick (Template Literals)
+var d = `مرحباً بك في
+مشروع المترجمات
+السنة الرابعة - ذكاء صنعي`;
+
+var templateWithExpr = `النتيجة هي: ${x + 50}`;
+
+// ------------------------------------------------------------------------------
+// 6. التعليقات بجميع أشكالها (Comments)
+// ------------------------------------------------------------------------------
+// هذا تعليق على سطر واحد
+var normalVar = 1;
+
 /*
-    هذا تعليق
-    على عدة أسطر
-    في JavaScript
+   هذا تعليق يمتد على عدة أسطر
+   ويحوي رموزاً خاصة بالداخل مثل * و / و +
+   don't close until star-slash
 */
+var afterComment = 2;
 
-// 14. Identifiers - أشكال مختلفة
-var _private = 1;
-var $element = 2;
-var camelCase = 3;
-var PascalCase = 4;
-var with_underscore = 5;
+// ------------------------------------------------------------------------------
+// 7. الأخطاء المعجمية للاختبار (Lexical Error Cases)
+// ملاحظة: ضع هذه الأسطر في ملفات اختبار منفصلة لاختبار التقاط الأخطاء وموقعها
+// ------------------------------------------------------------------------------
 
-// ===== خطأ معجمي - للاختبار =====
-var error1 = "unterminated string
-var error2 = 5;
+// خطأ 1: نص غير مغلق وانتقل لسطر جديد بدون \ (المثال المذكور في ورقة المشروع)
+// var s = "abc
+// var t = 5;
+
+// خطأ 2: نص بدأ بـ ' وانتهى بـ "
+// var errStr = 'mismatched quote";
+
+// خطأ 3: رقم غير صالح ملتصق بأحرف أو بادئة خاطئة
+// var errNum1 = 123abc;
+// var errNum2 = 0xG;
+// var errNum3 = 0o89;
+// var errNum4 = 12.34n;
+
+// خطأ 4: محارف غير معروفة في اللغة
+// var errChar = 5 @ 10;

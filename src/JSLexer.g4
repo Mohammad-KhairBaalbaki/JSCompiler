@@ -1,29 +1,39 @@
 // ============================================================
-// JavaScript ES2025 Lexer - ANTLR4
-// المرحلة الأولى - المحلل المفرداتي
-// مبني على: MDN Lexical Grammar + ECMAScript 2025 Spec
+// JavaScript ECMAScript 2025 (ES16) Lexer - ANTLR4
+// المرحلة الأولى - المحلل المفرداتي (Lexical Analyzer)
+// Reference: https://tc39.es/ecma262/2025/ (Clause 12: Lexical Grammar)
 // ============================================================
 
 lexer grammar JSLexer;
 
 // ============================================================
-// 1. HASHBANG COMMENT (لازم يكون أول شي في الملف فقط)
-// مثال: #!/usr/bin/env node
+// 1. HASHBANG COMMENT (ECMAScript 2025 - Clause 12.5)
+// مسموح حصراً في السطر الأول والعمود صفر من الملف
 // ============================================================
 
 HASHBANG
-    : '#!' ~[\r\n]* -> skip
+    : {getLine() == 1 && getCharPositionInLine() == 0}? '#!' ~[\r\n\u2028\u2029]*
     ;
 
 // ============================================================
-// 2. RESERVED KEYWORDS
-// ترتيب مهم: لازم قبل IDENTIFIER دايماً
+// 2. VARIABLE DECLARATIONS (البند 7 في المطلوب: Variable)
 // ============================================================
 
-// --- Variable Declaration ---
 VAR         : 'var' ;
 LET         : 'let' ;
 CONST       : 'const' ;
+
+// ============================================================
+// 3. BOOLEAN LITERALS (البند 3 في المطلوب: Boolean)
+// ============================================================
+
+TRUE        : 'true' ;
+FALSE       : 'false' ;
+
+// ============================================================
+// 4. RESERVED KEYWORDS (البند 1 في المطلوب: Reserved Keyword)
+// مطابق لمعيار ECMAScript 2025 - Clause 12.7.2
+// ============================================================
 
 // --- Control Flow ---
 IF          : 'if' ;
@@ -38,7 +48,7 @@ SWITCH      : 'switch' ;
 CASE        : 'case' ;
 DEFAULT     : 'default' ;
 
-// --- Functions ---
+// --- Functions & Generators ---
 FUNCTION    : 'function' ;
 ASYNC       : 'async' ;
 AWAIT       : 'await' ;
@@ -59,27 +69,27 @@ CATCH       : 'catch' ;
 FINALLY     : 'finally' ;
 THROW       : 'throw' ;
 
-// --- Modules ---
+// --- Modules & ES2025 Import Attributes (import ... with { type: 'json' }) ---
 IMPORT      : 'import' ;
 EXPORT      : 'export' ;
 FROM        : 'from' ;
 AS          : 'as' ;
 OF          : 'of' ;
+WITH        : 'with' ;
 
-// --- Operators Keywords ---
+// --- Operator Keywords ---
 TYPEOF      : 'typeof' ;
 INSTANCEOF  : 'instanceof' ;
 VOID        : 'void' ;
 IN          : 'in' ;
 
-// --- Other Keywords ---
-DEBUGGER    : 'debugger' ;
-WITH        : 'with' ;
+// --- Other & Null/Undefined ---
+DEBUGGER     : 'debugger' ;
+NULL_LITERAL : 'null' ;
+UNDEFINED    : 'undefined' ;
 
-// --- Future Reserved ---
+// --- Future Reserved & Strict Mode Reserved (Clause 12.7.2) ---
 ENUM        : 'enum' ;
-
-// --- Strict Mode Reserved ---
 IMPLEMENTS  : 'implements' ;
 INTERFACE   : 'interface' ;
 PACKAGE     : 'package' ;
@@ -88,251 +98,276 @@ PROTECTED   : 'protected' ;
 PUBLIC      : 'public' ;
 
 // ============================================================
-// 3. BOOLEAN LITERALS
+// 5. NUMERIC LITERALS (البند 2 في المطلوب: Numbers)
+// مطابق لمعيار ECMAScript 2025 - Clause 12.9.3
+// يدعم Numeric Separators (_) وجميع الصيغ الخمس المطلوبة
 // ============================================================
 
-TRUE        : 'true' ;
-FALSE       : 'false' ;
-
-// ============================================================
-// 4. NULL LITERAL
-// ============================================================
-
-NULL_LITERAL : 'null' ;
-
-// ============================================================
-// 5. NUMERIC LITERALS
-// ترتيب مهم: الأطول والأكثر تخصصاً أولاً
-// ============================================================
-
-// --- BigInt (لازم قبل الأرقام العادية) ---
-// مثال: 123n  0xFF n  0o77n  0b101n
+// --- BigInt (Decimal, Hex, Octal, Binary + 'n') ---
 BIGINT
     : (
-        [1-9] ([0-9] | '_' [0-9])*
-      | '0'
-      | '0' [xX] [0-9a-fA-F] ([0-9a-fA-F] | '_' [0-9a-fA-F])*
-      | '0' [oO] [0-7] ([0-7] | '_' [0-7])*
-      | '0' [bB] [01] ([01] | '_' [01])*
+        DECIMAL_INTEGER_LITERAL
+      | '0' [xX] HEX_DIGITS
+      | '0' [oO] OCTAL_DIGITS
+      | '0' [bB] BINARY_DIGITS
       ) 'n'
     ;
 
 // --- Hexadecimal ---
-// مثال: 0xFF  0xA0_B0
 HEX_NUMBER
-    : '0' [xX] [0-9a-fA-F] ([0-9a-fA-F] | '_' [0-9a-fA-F])*
+    : '0' [xX] HEX_DIGITS
     ;
 
-// --- Octal (الصيغة الجديدة 0o) ---
-// مثال: 0o777  0O644
+// --- Octal ---
 OCTAL_NUMBER
-    : '0' [oO] [0-7] ([0-7] | '_' [0-7])*
+    : '0' [oO] OCTAL_DIGITS
     ;
 
 // --- Binary ---
-// مثال: 0b1010  0B1100
 BINARY_NUMBER
-    : '0' [bB] [01] ([01] | '_' [01])*
+    : '0' [bB] BINARY_DIGITS
     ;
 
-// --- Float ---
-// مثال: 3.14  .5  1e10  1.5e-3  1_000.5
+// --- Float (يدعم 3.14 و .5 و 5. و 1.5e-3 و 1_000.5) ---
 FLOAT
-    : [0-9] ([0-9] | '_' [0-9])* '.' [0-9] ([0-9] | '_' [0-9])* EXPONENT?
-    | '.' [0-9] ([0-9] | '_' [0-9])* EXPONENT?
-    | [0-9] ([0-9] | '_' [0-9])* EXPONENT
+    : DECIMAL_INTEGER_LITERAL '.' DECIMAL_DIGITS? EXPONENT_PART?
+    | '.' DECIMAL_DIGITS EXPONENT_PART?
+    | DECIMAL_INTEGER_LITERAL EXPONENT_PART
     ;
 
 // --- Integer ---
-// مثال: 42  1_000_000  0
 INTEGER
+    : DECIMAL_INTEGER_LITERAL
+    ;
+
+fragment DECIMAL_INTEGER_LITERAL
     : '0'
-    | [1-9] ([0-9] | '_' [0-9])*
+    | [1-9] ('_'? [0-9])*
     ;
 
-// Helper fragment للـ exponent
-fragment EXPONENT
-    : [eE] [+\-]? [0-9] ([0-9] | '_' [0-9])*
+fragment DECIMAL_DIGITS
+    : [0-9] ('_'? [0-9])*
+    ;
+
+fragment HEX_DIGITS
+    : [0-9a-fA-F] ('_'? [0-9a-fA-F])*
+    ;
+
+fragment OCTAL_DIGITS
+    : [0-7] ('_'? [0-7])*
+    ;
+
+fragment BINARY_DIGITS
+    : [01] ('_'? [01])*
+    ;
+
+fragment EXPONENT_PART
+    : [eE] [+\-]? DECIMAL_DIGITS
     ;
 
 // ============================================================
-// 6. STRING LITERALS
+// 6. STRING LITERALS (البند 4 والحالات الخاصة 1 و 2)
+// مطابق لمعيار ECMAScript 2025 - Clause 12.9.4 & 12.9.6
 // ============================================================
 
-// --- Double Quote String ---
-// يدعم: escape sequences, line continuation (\+newline), لكن ليس raw newline
-// مثال: "hello"  "say \"hi\""  "line1\
-//        line2"
+// --- Double Quote String ("...") ---
+// يدعم علامة ' بالداخل دون هروب، ومحارف الهروب، وامتداد السطر عبر \ متبوعة بسطر جديد
 DOUBLE_STRING
     : '"' (
-        '\\' ('\r\n' | '\r' | '\n')    // line continuation
-      | '\\' .                          // any escape sequence
-      | ~["\\\r\n]                      // any char except quote, backslash, newline
+        '\\' LINE_TERMINATOR_SEQUENCE   // Line Continuation (\ + newline)
+      | '\\' ~[\r\n\u2028\u2029]        // Escape sequence
+      | ~["\\\r\n\u2028\u2029]          // Normal characters (including ')
       )* '"'
     ;
 
-// --- Single Quote String ---
-// مثال: 'hello'  'it\'s'  'line1\
-//        line2'
+// --- Single Quote String ('...') ---
+// يدعم علامة " بالداخل دون هروب، ومحارف الهروب، وامتداد السطر عبر \ متبوعة بسطر جديد
 SINGLE_STRING
     : '\'' (
-        '\\' ('\r\n' | '\r' | '\n')    // line continuation
-      | '\\' .                          // any escape sequence
-      | ~['\\\r\n]                      // any char except quote, backslash, newline
+        '\\' LINE_TERMINATOR_SEQUENCE   // Line Continuation (\ + newline)
+      | '\\' ~[\r\n\u2028\u2029]        // Escape sequence
+      | ~['\\\r\n\u2028\u2029]          // Normal characters (including ")
       )* '\''
     ;
 
-// --- Template Literal (Backtick) ---
-// يدعم: متعدد الأسطر، ${expressions}، escape sequences
-// مثال: `hello ${name}`  `multi
-//        line`
+// --- Template Literal (`...`) ---
+// الحالات الخاصة 2: نصوص على عدة أسطر بين علامتي backtick `
 TEMPLATE_LITERAL
     : '`' (
-        '\\' .                          // escape sequence
-      | '${' .*? '}'                   // template expression ${...}
-      | ~[`\\]                          // any char except backtick and backslash
+        '\\' .                          // Escape sequence (including \` and \$)
+      | '${' .*? '}'                    // Template substitution ${...}
+      | ~[`\\]                          // Multi-line characters
       )* '`'
     ;
 
+fragment LINE_TERMINATOR_SEQUENCE
+    : '\r\n'
+    | [\r\n\u2028\u2029]
+    ;
+
 // ============================================================
-// 7. COMMENTS
+// 7. COMMENTS (البند 8 والحالة الخاصة 3)
+// ملاحظة: بدون -> skip لكي يتم التعرف عليها وطباعتها ضمن الـ Tokens
 // ============================================================
 
-// --- Single Line Comment ---
-// مثال: // this is a comment
 SINGLE_LINE_COMMENT
-    : '//' ~[\r\n]* -> skip
+    : '//' ~[\r\n\u2028\u2029]*
     ;
 
-// --- Multi Line Comment ---
-// مثال: /* this is
-//         multi line */
 MULTI_LINE_COMMENT
-    : '/*' .*? '*/' -> skip
+    : '/*' .*? '*/'
     ;
 
 // ============================================================
-// 8. OPERATORS
-// الأطول أولاً دايماً لتجنب التعارض
+// 8. OPERATORS & PUNCTUATION (البند 5: Operators)
+// مطابق لمعيار ECMAScript 2025 - Clause 12.8
+// مرتبة من الأطول إلى الأقصر (Maximal Munch)
 // ============================================================
 
 // --- Spread / Rest ---
-ELLIPSIS        : '...' ;
+ELLIPSIS            : '...' ;
 
 // --- Optional Chaining ---
-OPTIONAL_CHAIN  : '?.' ;
+OPTIONAL_CHAIN      : '?.' ;
 
-// --- Nullish Coalescing Assignment ---
-NULLISH_ASSIGN  : '??=' ;
+// --- Compound Assignments (4 & 3 chars) ---
+URSHIFT_ASSIGN      : '>>>=' ;
+LEFT_SHIFT_ASSIGN   : '<<=' ;
+RIGHT_SHIFT_ASSIGN  : '>>=' ;
+POW_ASSIGN          : '**=' ;
+NULLISH_ASSIGN      : '??=' ;
+AND_ASSIGN          : '&&=' ;
+OR_ASSIGN           : '||=' ;
 
-// --- Logical Assignment ---
-AND_ASSIGN      : '&&=' ;
-OR_ASSIGN       : '||=' ;
+// --- Strict Equality (3 chars) ---
+STRICT_EQ           : '===' ;
+STRICT_NEQ          : '!==' ;
 
-// --- Strict Equality ---
-STRICT_EQ       : '===' ;
-STRICT_NEQ      : '!==' ;
+// --- Bitwise Unsigned Right Shift (3 chars) ---
+URSHIFT             : '>>>' ;
 
-// --- Equality ---
-EQ              : '==' ;
-NEQ             : '!=' ;
+// --- Compound Assignments (2 chars) ---
+PLUS_ASSIGN         : '+=' ;
+MINUS_ASSIGN        : '-=' ;
+MUL_ASSIGN          : '*=' ;
+DIV_ASSIGN          : '/=' ;
+MOD_ASSIGN          : '%=' ;
+AND_BIT_ASSIGN      : '&=' ;
+OR_BIT_ASSIGN       : '|=' ;
+XOR_ASSIGN          : '^=' ;
 
-// --- Comparison ---
-LTE             : '<=' ;
-GTE             : '>=' ;
-LT              : '<' ;
-GT              : '>' ;
+// --- Equality & Relational (2 chars) ---
+EQ                  : '==' ;
+NEQ                 : '!=' ;
+LTE                 : '<=' ;
+GTE                 : '>=' ;
 
-// --- Arrow Function ---
-ARROW           : '=>' ;
+// --- Arrow Function (2 chars) ---
+ARROW               : '=>' ;
 
-// --- Assignment ---
-ASSIGN          : '=' ;
-PLUS_ASSIGN     : '+=' ;
-MINUS_ASSIGN    : '-=' ;
-MUL_ASSIGN      : '*=' ;
-DIV_ASSIGN      : '/=' ;
-MOD_ASSIGN      : '%=' ;
-POW_ASSIGN      : '**=' ;
-AND_BIT_ASSIGN  : '&=' ;
-OR_BIT_ASSIGN   : '|=' ;
-XOR_ASSIGN      : '^=' ;
-LEFT_SHIFT_ASSIGN  : '<<=' ;
-RIGHT_SHIFT_ASSIGN : '>>=' ;
-URSHIFT_ASSIGN     : '>>>=' ;
+// --- Increment, Decrement & Power (2 chars) ---
+INCREMENT           : '++' ;
+DECREMENT           : '--' ;
+POW                 : '**' ;
 
-// --- Arithmetic ---
-INCREMENT       : '++' ;
-DECREMENT       : '--' ;
-POW             : '**' ;
-PLUS            : '+' ;
-MINUS           : '-' ;
-MUL             : '*' ;
-DIV             : '/' ;
-MOD             : '%' ;
+// --- Bitwise Shifts (2 chars) ---
+LEFT_SHIFT          : '<<' ;
+RIGHT_SHIFT         : '>>' ;
 
-// --- Bitwise ---
-LEFT_SHIFT      : '<<' ;
-URSHIFT         : '>>>' ;
-RIGHT_SHIFT     : '>>' ;
-BIT_AND         : '&' ;
-BIT_OR          : '|' ;
-BIT_XOR         : '^' ;
-BIT_NOT         : '~' ;
+// --- Logical & Nullish (2 chars) ---
+LOGICAL_AND         : '&&' ;
+LOGICAL_OR          : '||' ;
+NULLISH             : '??' ;
 
-// --- Logical ---
-LOGICAL_AND     : '&&' ;
-LOGICAL_OR      : '||' ;
-NULLISH         : '??' ;
-LOGICAL_NOT     : '!' ;
+// --- Single-Character Operators ---
+ASSIGN              : '=' ;
+LT                  : '<' ;
+GT                  : '>' ;
+PLUS                : '+' ;
+MINUS               : '-' ;
+MUL                 : '*' ;
+DIV                 : '/' ;
+MOD                 : '%' ;
+BIT_AND             : '&' ;
+BIT_OR              : '|' ;
+BIT_XOR             : '^' ;
+BIT_NOT             : '~' ;
+LOGICAL_NOT         : '!' ;
+QUESTION            : '?' ;
+COLON               : ':' ;
+DOT                 : '.' ;
 
-// --- Ternary ---
-QUESTION        : '?' ;
-COLON           : ':' ;
-
-// --- Member Access ---
-DOT             : '.' ;
-
-// --- Private Field (#) ---
-HASH            : '#' ;
-
-// ============================================================
-// 9. PUNCTUATION / DELIMITERS
-// ============================================================
-
-OPEN_PAREN      : '(' ;
-CLOSE_PAREN     : ')' ;
-OPEN_BRACE      : '{' ;
-CLOSE_BRACE     : '}' ;
-OPEN_BRACKET    : '[' ;
-CLOSE_BRACKET   : ']' ;
-SEMICOLON       : ';' ;
-COMMA           : ',' ;
+// --- Delimiters / Punctuation ---
+OPEN_PAREN          : '(' ;
+CLOSE_PAREN         : ')' ;
+OPEN_BRACE          : '{' ;
+CLOSE_BRACE         : '}' ;
+OPEN_BRACKET        : '[' ;
+CLOSE_BRACKET       : ']' ;
+SEMICOLON           : ';' ;
+COMMA               : ',' ;
 
 // ============================================================
-// 10. IDENTIFIERS
-// لازم تكون بعد كل الكلمات المحجوزة
-// تدعم: حروف عربية وUnicode, $, _
-// مثال: myVar  _private  $element  متغير
+// 9. IDENTIFIERS (البند 6: Identifiers & Private Identifiers)
+// مطابق لمعيار ECMAScript 2025 - Clause 12.7
 // ============================================================
 
 IDENTIFIER
-    : [$_\p{ID_Start}] [$_\p{ID_Continue}]*
+    : IDENTIFIER_START IDENTIFIER_PART*
+    ;
+
+PRIVATE_IDENTIFIER
+    : '#' IDENTIFIER_START IDENTIFIER_PART*
+    ;
+
+fragment IDENTIFIER_START
+    : [$_\p{ID_Start}]
+    ;
+
+fragment IDENTIFIER_PART
+    : [$_\p{ID_Continue}\u200C\u200D]
     ;
 
 // ============================================================
-// 11. WHITESPACE - يتجاهل ولا يطبع
+// 10. WHITESPACE (Clause 12.2 & 12.3 - يُتجاهل)
 // ============================================================
 
 WS
-    : [ \t\r\n\u000B\u000C\u00A0\uFEFF]+ -> skip
+    : [ \t\r\n\u000B\u000C\u00A0\uFEFF\u2028\u2029]+ -> skip
     ;
 
 // ============================================================
-// 12. LEXICAL ERRORS - أي شي ما اتعرف عليه
-// لازم تكون آخر قاعدة دايماً
+// 11. LEXICAL ERRORS (الأخطاء المعجمية - Invalid or unexpected token)
+// تلتقط الحالات الخاطئة كاملة (مثل var s = "abc) كخطأ واحد في موقعه الدقيق
 // ============================================================
 
+// 1. نص مفرد أو مزدوج غير مغلق قبل نهاية السطر أو الملف
+UNTERMINATED_STRING
+    : '"' ( '\\' LINE_TERMINATOR_SEQUENCE | '\\' ~[\r\n\u2028\u2029] | ~["\\\r\n\u2028\u2029] )*
+    | '\'' ( '\\' LINE_TERMINATOR_SEQUENCE | '\\' ~[\r\n\u2028\u2029] | ~['\\\r\n\u2028\u2029] )*
+    ;
+
+// 2. قالب نصي (Template Literal) غير مغلق حتى نهاية الملف
+UNTERMINATED_TEMPLATE
+    : '`' ( '\\' . | ~[`\\] )*
+    ;
+
+// 3. تعليق متعدد الأسطر غير مغلق حتى نهاية الملف
+UNTERMINATED_COMMENT
+    : '/*' .*? EOF
+    ;
+
+// 4. أرقام بصيغة غير صالحة في ES2025 (مثل: 123abc, 0xG, 0o89, 0b12, 3.14n, 007, 123_)
+MALFORMED_NUMBER
+    : (BIGINT | HEX_NUMBER | OCTAL_NUMBER | BINARY_NUMBER | FLOAT | INTEGER) [$_\p{ID_Start}0-9.]+
+    | '0' [0-9_]+
+    | '0' [xX] ('_' | ~[0-9a-fA-F\r\n\t ;,()[\]{}+\-*/%&|^!~=<>?:.])? IDENTIFIER_PART*
+    | '0' [oO] ('_' | ~[0-7\r\n\t ;,()[\]{}+\-*/%&|^!~=<>?:.])? IDENTIFIER_PART*
+    | '0' [bB] ('_' | ~[01\r\n\t ;,()[\]{}+\-*/%&|^!~=<>?:.])? IDENTIFIER_PART*
+    | [0-9]+ ('_' [0-9]*)+ '_'
+    ;
+
+// 5. أي محرف غير معروف آخر (مثل @ أو # منفردة أو \ منفردة)
 UNKNOWN
     : .
     ;
