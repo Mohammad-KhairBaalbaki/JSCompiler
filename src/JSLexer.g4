@@ -86,7 +86,6 @@ IN          : 'in' ;
 // --- Other & Null/Undefined ---
 DEBUGGER     : 'debugger' ;
 NULL_LITERAL : 'null' ;
-UNDEFINED    : 'undefined' ;
 
 // --- Future Reserved & Strict Mode Reserved (Clause 12.7.2) ---
 ENUM        : 'enum' ;
@@ -354,7 +353,7 @@ UNTERMINATED_TEMPLATE
 
 // 3. تعليق متعدد الأسطر غير مغلق حتى نهاية الملف
 UNTERMINATED_COMMENT
-    : '/*' .*? EOF
+    : '/*' ( ~[*] | '*'+ ~[*/] )* '*'* EOF
     ;
 
 // 4. أرقام بصيغة غير صالحة في ES2025 (مثل: 123abc, 0xG, 0o89, 0b12, 3.14n, 007, 123_)

@@ -8,9 +8,9 @@
 
 // خطأ 3: رقم غير صالح ملتصق بأحرف أو بادئة خاطئة
  var errNum1 = 123abc;
- var errNum2 = 0xF;
+ var errNum2 = 0xG;
  var errNum3 = 0o89;
  var errNum4 = 12.34n;
-
+#!/usr/bin/env node
 // خطأ 4: محارف غير معروفة في اللغة
  var errChar = 5 @ 10;
