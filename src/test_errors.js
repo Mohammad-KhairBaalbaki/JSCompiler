@@ -3,6 +3,8 @@
  var s = "abc
  var t = 5;
 
+ var
+
 // خطأ 2: نص بدأ بـ ' وانتهى بـ "
  var errStr = 'mismatched quote";
 

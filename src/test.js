@@ -8,6 +8,7 @@
 // 1. الكلمات المحجوزة ومحددات المتغيرات (Reserved Keywords & Variables)
 // ------------------------------------------------------------------------------
 var myVar = 10;
+var text = "a<LS>b";
 let userCount = 20;
 const MAX_LIMIT = 100;
 
