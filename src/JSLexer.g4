@@ -6,6 +6,224 @@
 
 lexer grammar JSLexer;
 
+tokens { UNTERMINATED_TEMPLATE }
+
+@members {
+    private static final class TemplateState {
+        final int start;
+        final int line;
+        final int column;
+
+        // -1 means template text; 0 or higher means interpolation.
+        int braceDepth = -1;
+
+        TemplateState(int start, int line, int column) {
+            this.start = start;
+            this.line = line;
+            this.column = column;
+        }
+    }
+
+    private final java.util.ArrayDeque<TemplateState> templates =
+        new java.util.ArrayDeque<>();
+
+    private boolean templateEofReported = false;
+
+
+    // A parser may select the exact slash lexical goal before its next token.
+    private boolean regexAllowed = true;
+    private int previousType = org.antlr.v4.runtime.Token.INVALID_TYPE;
+    private int beforePreviousType = org.antlr.v4.runtime.Token.INVALID_TYPE;
+    private final java.util.ArrayDeque<Boolean> controlParens =
+        new java.util.ArrayDeque<>();
+    private final java.util.ArrayDeque<Boolean> blockBraces =
+        new java.util.ArrayDeque<>();
+
+    public void setRegexAllowed(boolean allowed) {
+        regexAllowed = allowed;
+    }
+
+    private boolean isControlKeyword(int type) {
+        return type == IF || type == WHILE || type == FOR || type == WITH
+            || type == SWITCH || type == CATCH;
+    }
+
+    private void trackLexicalContext(org.antlr.v4.runtime.Token token) {
+        int type = token.getType();
+        if (type == SINGLE_LINE_COMMENT || type == MULTI_LINE_COMMENT
+                || type == HASHBANG || type == org.antlr.v4.runtime.Token.EOF) return;
+        switch (type) {
+            case OPEN_PAREN:
+                controlParens.push(isControlKeyword(previousType)
+                    && beforePreviousType != DOT
+                    && beforePreviousType != OPTIONAL_CHAIN);
+                regexAllowed = true;
+                break;
+            case CLOSE_PAREN:
+                regexAllowed = !controlParens.isEmpty() && controlParens.pop();
+                break;
+            case OPEN_BRACE:
+                blockBraces.push(previousType == org.antlr.v4.runtime.Token.INVALID_TYPE
+                    || previousType == SEMICOLON || previousType == CLOSE_PAREN
+                    || previousType == ELSE || previousType == TRY
+                    || previousType == FINALLY || previousType == DO
+                    || previousType == OPEN_BRACE || previousType == CLOSE_BRACE);
+                regexAllowed = true;
+                break;
+            case CLOSE_BRACE:
+                regexAllowed = _mode != TEMPLATE_MODE
+                    && !blockBraces.isEmpty() && blockBraces.pop();
+                break;
+            case IDENTIFIER: case PRIVATE_IDENTIFIER:
+            case TRUE: case FALSE: case NULL_LITERAL: case THIS: case SUPER:
+            case BIGINT: case HEX_NUMBER: case OCTAL_NUMBER: case BINARY_NUMBER:
+            case FLOAT: case INTEGER: case DOUBLE_STRING: case SINGLE_STRING:
+            case REGEX_LITERAL: case TEMPLATE_END: case CLOSE_BRACKET:
+            case INCREMENT: case DECREMENT: case DOT: case OPTIONAL_CHAIN:
+                regexAllowed = false;
+                break;
+            case TEMPLATE_TEXT: case TEMPLATE_ESCAPE: case TEMPLATE_DOLLAR:
+                return;
+            default:
+                regexAllowed = previousType != DOT && previousType != OPTIONAL_CHAIN;
+        }
+        beforePreviousType = previousType;
+        previousType = type;
+    }
+
+    private void validateStringEscapes() {
+        String text = getText();
+        for (int i = 1; i < text.length() - 1; i++) {
+            if (text.charAt(i) != '\\') continue;
+            char escape = text.charAt(++i);
+            if (escape != 'x' && escape != 'u') continue;
+            int digits = escape == 'x' ? 2 : 4;
+            boolean braced = escape == 'u' && i + 1 < text.length() - 1
+                && text.charAt(i + 1) == '{';
+            if (braced) i++;
+            int count = 0;
+            long value = 0;
+            while (i + 1 < text.length() - 1) {
+                int digit = Character.digit(text.charAt(i + 1), 16);
+                if (digit < 0 || text.charAt(i + 1) > 127) break;
+                i++;
+                count++;
+                value = Math.min(0x110000L, value * 16 + digit);
+                if (!braced && count == digits) break;
+            }
+            boolean invalid;
+            if (braced) {
+                invalid = count == 0 || value > 0x10FFFFL
+                    || i + 1 >= text.length() - 1 || text.charAt(i + 1) != '}';
+                if (!invalid) i++;
+            } else {
+                invalid = count != digits;
+            }
+            if (invalid) {
+                getErrorListenerDispatch().syntaxError(
+                    this, null, _tokenStartLine, _tokenStartCharPositionInLine,
+                    "Malformed string escape", null
+                );
+                return;
+            }
+        }
+    }
+
+    private void beginTemplate() {
+        templates.push(new TemplateState(
+            _tokenStartCharIndex,
+            _tokenStartLine,
+            _tokenStartCharPositionInLine
+        ));
+        mode(TEMPLATE_MODE);
+    }
+
+    private void beginInterpolation() {
+        templates.peek().braceDepth = 0;
+        mode(DEFAULT_MODE);
+    }
+
+    private void openBrace() {
+        if (!templates.isEmpty()
+                && templates.peek().braceDepth >= 0) {
+            templates.peek().braceDepth++;
+        }
+    }
+
+    private void closeBrace() {
+        if (templates.isEmpty()
+                || templates.peek().braceDepth < 0) {
+            return;
+        }
+
+        TemplateState current = templates.peek();
+
+        if (current.braceDepth == 0) {
+            current.braceDepth = -1;
+            mode(TEMPLATE_MODE);
+        } else {
+            current.braceDepth--;
+        }
+    }
+
+    private void endTemplate() {
+        templates.pop();
+
+        // A nested template finishes inside its parent's expression.
+        mode(DEFAULT_MODE);
+    }
+
+    @Override
+    public org.antlr.v4.runtime.Token nextToken() {
+        org.antlr.v4.runtime.Token token = super.nextToken();
+
+        if (token.getType() == org.antlr.v4.runtime.Token.EOF
+                && !templates.isEmpty()
+                && !templateEofReported) {
+            templateEofReported = true;
+
+            TemplateState opening = templates.peekLast();
+
+            String text = _input.getText(
+                org.antlr.v4.runtime.misc.Interval.of(
+                    opening.start, _input.index() - 1
+                )
+            );
+
+            org.antlr.v4.runtime.CommonToken error =
+                new org.antlr.v4.runtime.CommonToken(
+                    UNTERMINATED_TEMPLATE, text
+                );
+
+            error.setLine(opening.line);
+            error.setCharPositionInLine(opening.column);
+            error.setStartIndex(opening.start);
+            error.setStopIndex(_input.index() - 1);
+
+            return error;
+        }
+
+        trackLexicalContext(token);
+        return token;
+    }
+
+    @Override
+    public void reset() {
+        super.reset();
+
+        if (templates != null) {
+            templates.clear();
+        }
+
+        templateEofReported = false;
+        if (controlParens != null) controlParens.clear();
+        if (blockBraces != null) blockBraces.clear();
+        regexAllowed = true;
+        previousType = org.antlr.v4.runtime.Token.INVALID_TYPE;
+        beforePreviousType = org.antlr.v4.runtime.Token.INVALID_TYPE;
+    }
+}
+
 // ============================================================
 // 1. HASHBANG COMMENT (ECMAScript 2025 - Clause 12.5)
 // مسموح حصراً في السطر الأول والعمود صفر من الملف
@@ -172,31 +390,22 @@ fragment EXPONENT_PART
 // --- Double Quote String ("...") ---
 // يدعم علامة ' بالداخل دون هروب، ومحارف الهروب، وامتداد السطر عبر \ متبوعة بسطر جديد
 DOUBLE_STRING
-    : '"' (
-        '\\' LINE_TERMINATOR_SEQUENCE   // Line Continuation (\ + newline)
-      | '\\' ~[\r\n\u2028\u2029]        // Escape sequence
-      | ~["\\\r\n\u2028\u2029]          // Normal characters (including ')
-      )* '"'
+    : '"' ('\\' LINE_TERMINATOR_SEQUENCE
+          | '\\' ~[\r\n\u2028\u2029]
+          | ~["\\\r\n])* '"' {validateStringEscapes();}
     ;
 
-// --- Single Quote String ('...') ---
-// يدعم علامة " بالداخل دون هروب، ومحارف الهروب، وامتداد السطر عبر \ متبوعة بسطر جديد
 SINGLE_STRING
-    : '\'' (
-        '\\' LINE_TERMINATOR_SEQUENCE   // Line Continuation (\ + newline)
-      | '\\' ~[\r\n\u2028\u2029]        // Escape sequence
-      | ~['\\\r\n\u2028\u2029]          // Normal characters (including ")
-      )* '\''
+    : '\'' ('\\' LINE_TERMINATOR_SEQUENCE
+           | '\\' ~[\r\n\u2028\u2029]
+           | ~['\\\r\n])* '\'' {validateStringEscapes();}
     ;
+
 
 // --- Template Literal (`...`) ---
 // الحالات الخاصة 2: نصوص على عدة أسطر بين علامتي backtick `
 TEMPLATE_LITERAL
-    : '`' (
-        '\\' .                          // Escape sequence (including \` and \$)
-      | '${' .*? '}'                    // Template substitution ${...}
-      | ~[`\\]                          // Multi-line characters
-      )* '`'
+    : '`' {beginTemplate();}
     ;
 
 fragment LINE_TERMINATOR_SEQUENCE
@@ -222,6 +431,31 @@ MULTI_LINE_COMMENT
 // مطابق لمعيار ECMAScript 2025 - Clause 12.8
 // مرتبة من الأطول إلى الأقصر (Maximal Munch)
 // ============================================================
+
+REGEX_LITERAL
+    : {regexAllowed}? '/' REGEX_FIRST REGEX_CHAR* '/' IDENTIFIER_PART*
+    ;
+
+fragment REGEX_FIRST
+    : ~[*/\\\r\n\u2028\u2029[]
+    | REGEX_ESCAPE
+    | REGEX_CLASS
+    ;
+
+fragment REGEX_CHAR
+    : ~[/\\\r\n\u2028\u2029[]
+    | REGEX_ESCAPE
+    | REGEX_CLASS
+    ;
+
+fragment REGEX_ESCAPE
+    : '\\' ~[\r\n\u2028\u2029]
+    ;
+
+fragment REGEX_CLASS
+    : '[' (REGEX_ESCAPE | ~[\]\\\r\n\u2028\u2029])* ']'
+    ;
+
 
 // --- Spread / Rest ---
 ELLIPSIS            : '...' ;
@@ -299,8 +533,13 @@ DOT                 : '.' ;
 // --- Delimiters / Punctuation ---
 OPEN_PAREN          : '(' ;
 CLOSE_PAREN         : ')' ;
-OPEN_BRACE          : '{' ;
-CLOSE_BRACE         : '}' ;
+OPEN_BRACE
+    : '{' {openBrace();}
+    ;
+
+CLOSE_BRACE
+    : '}' {closeBrace();}
+    ;
 OPEN_BRACKET        : '[' ;
 CLOSE_BRACKET       : ']' ;
 SEMICOLON           : ';' ;
@@ -359,14 +598,10 @@ WS
 
 // 1. نص مفرد أو مزدوج غير مغلق قبل نهاية السطر أو الملف
 UNTERMINATED_STRING
-    : '"' ( '\\' LINE_TERMINATOR_SEQUENCE | '\\' ~[\r\n\u2028\u2029] | ~["\\\r\n\u2028\u2029] )*
-    | '\'' ( '\\' LINE_TERMINATOR_SEQUENCE | '\\' ~[\r\n\u2028\u2029] | ~['\\\r\n\u2028\u2029] )*
+    : '"' ('\\' LINE_TERMINATOR_SEQUENCE | '\\' ~[\r\n\u2028\u2029] | ~["\\\r\n])* '\\'?
+    | '\'' ('\\' LINE_TERMINATOR_SEQUENCE | '\\' ~[\r\n\u2028\u2029] | ~['\\\r\n])* '\\'?
     ;
 
-// 2. قالب نصي (Template Literal) غير مغلق حتى نهاية الملف
-UNTERMINATED_TEMPLATE
-    : '`' ( '\\' . | ~[`\\] )*
-    ;
 
 // 3. تعليق متعدد الأسطر غير مغلق حتى نهاية الملف
 UNTERMINATED_COMMENT
@@ -386,4 +621,26 @@ MALFORMED_NUMBER
 // 5. أي محرف غير معروف آخر (مثل @ أو # منفردة أو \ منفردة)
 UNKNOWN
     : .
+    ;
+
+mode TEMPLATE_MODE;
+
+TEMPLATE_END
+    : '`' {endTemplate();}
+    ;
+
+TEMPLATE_INTERPOLATION_START
+    : '${' {beginInterpolation();}
+    ;
+
+TEMPLATE_ESCAPE
+    : '\\' .?
+    ;
+
+TEMPLATE_TEXT
+    : ~[`\\$]+
+    ;
+
+TEMPLATE_DOLLAR
+    : '$'
     ;

@@ -1,7 +1,9 @@
 // =============================================================================
-// section4_test.js
+// strings_template_rgex.js
 // JavaScript ECMAScript 2025 Lexer
 // Section 4: Strings, Template Literals & Special Cases
+// Run valid examples and value assertions: node JSCompiler/src/strings_template_rgex.js
+// Run isolated malformed cases and lexer checks: node JSCompiler/tests/strings_templates.cjs
 // =============================================================================
 
 
@@ -102,6 +104,8 @@ let template6 = `Single quote: ' and double quote: "`;
 
 let name = "Masa";
 let age = 20;
+let user = {name: "Masa"};
+let numbers = [10, 20, 30];
 
 let interpolation1 = `Hello ${name}`;
 let interpolation2 = `Age: ${age}`;
@@ -176,40 +180,96 @@ let boundary8 = `\t`;
 
 
 // -----------------------------------------------------------------------------
-// Test 12. Invalid / Malformed String Cases
-// These cases are intentionally invalid.
-// Keep them at the end of the test file.
+// Test 12. Template boundaries: strings, comments, functions, and nesting
 // -----------------------------------------------------------------------------
 
-// Unterminated single-quoted string:
-let invalid1 = 'This string never ends;
+let braceString = `Value: ${"}"} tail`;
+let backtickString = `Value: ${"`"} tail`;
+let blockComment = `Value: ${1 /* } ${ ` ignored */ + 2} tail`;
+let lineComment = `Value: ${1 // } ${ ` ignored
+    + 2} tail`;
+let functionBody = `Value: ${(() => { return {value: 7}; })().value} tail`;
+let nestedObject = `Outer ${{value: `Inner ${2 + 3}`}.value} tail`;
+let adjacent = `${1}${2}${3}`;
+let dollarText = `$ $$ $name ${4} $`;
+let escapedThenReal = `\${name}: ${name}`;
 
-// Unterminated double-quoted string:
-let invalid2 = "This string never ends;
+// -----------------------------------------------------------------------------
+// Test 13. Regex literals and division inside interpolation
+// These are valid JavaScript. The lexer must also handle regex token boundaries.
+// -----------------------------------------------------------------------------
 
-// Newline inside a single-quoted string without line continuation:
-let invalid3 = 'First line
-Second line';
+let regexClosingBrace = `Match: ${/}/.test("}")} tail`;
+let regexOpeningBrace = `Match: ${/{/.test("{")} tail`;
+let regexClass = `Match: ${/[{}]/.test("{")} tail`;
+let regexBacktick = `Match: ${/`/.test("`")} tail`;
+let division = `Value: ${12 / 3 / 2} tail`;
 
-// Newline inside a double-quoted string without line continuation:
-let invalid4 = "First line
-Second line";
+// -----------------------------------------------------------------------------
+// Test 14. Valid escapes and literal Unicode line/paragraph separators
+// The following two strings contain actual U+2028 and U+2029 characters.
+// -----------------------------------------------------------------------------
 
-// Backslash at the end of file or before an invalid line continuation:
-let invalid5 = "Invalid escape at end \
+let literalLineSeparator = "A B";
+let literalParagraphSeparator = 'A B';
+let escapedCodePoint = "\u{10FFFF}";
+let taggedInvalidEscape = String.raw`\xZZ`;
 
-// Unterminated template literal:
-let invalid6 = `This template never ends;
+// -----------------------------------------------------------------------------
+// Test 15. Execute assertions; a wrong result throws instead of silently passing.
+// Malformed sources are tested independently in ../tests/strings_templates.cjs.
+// -----------------------------------------------------------------------------
+//
+//const checks = [
+//    ["single quote", single1, "Hello"],
+//    ["double quote", double1, "Hello"],
+//    ["escaped quote", quote1, "It's a beautiful day"],
+//    ["hex escape", escape13, "Hexadecimal escape: A"],
+//    ["Unicode escape", escape11, "Unicode: A"],
+//    ["code point escape", escape12, "Unicode code point: 😀"],
+//    ["identity escape q", escape14, "Unknown escape: q"],
+//    ["identity escape z", escape15, "Another unknown escape: z"],
+//    ["line continuation", continuation1, "This is the first line and this is the second line"],
+//    ["CRLF continuation", continuation3, "CRLF continuation: second line"],
+//    ["multiline template", template3, "This is a template literal\nthat spans multiple lines."],
+//    ["interpolation", interpolation1, "Hello Masa"],
+//    ["object property", interpolation8, "Object property: Masa"],
+//    ["array element", interpolation9, "Array element: 10"],
+//    ["nested template", nested1, "Outer Inner template"],
+//    ["nested interpolation", nested2, "Result: Value = 15"],
+//    ["nested template and text", nested3, "Outer text Inner Masa outer text"],
+//    ["escaped backtick", templateEscape1, "Escaped backtick: `"],
+//    ["escaped interpolation", templateEscape3, "Escaped interpolation: ${name}"],
+//    ["object braces", complex3, "Object: Laptop"],
+//    ["nested braces", complex5, "Nested braces: 100"],
+//    ["quoted interpolation text", complex6, "String inside expression: Hello ${name}"],
+//    ["empty template", boundary3, ""],
+//    ["brace in string", braceString, "Value: } tail"],
+//    ["backtick in string", backtickString, "Value: ` tail"],
+//    ["block comment", blockComment, "Value: 3 tail"],
+//    ["line comment", lineComment, "Value: 3 tail"],
+//    ["function body", functionBody, "Value: 7 tail"],
+//    ["template in object", nestedObject, "Outer Inner 5 tail"],
+//    ["adjacent substitutions", adjacent, "123"],
+//    ["literal dollars", dollarText, "$ $$ $name 4 $"],
+//    ["escaped and real substitutions", escapedThenReal, "${name}: Masa"],
+//    ["regex closing brace", regexClosingBrace, "Match: true tail"],
+//    ["regex opening brace", regexOpeningBrace, "Match: true tail"],
+//    ["regex character class", regexClass, "Match: true tail"],
+//    ["regex backtick", regexBacktick, "Match: true tail"],
+//    ["division", division, "Value: 2 tail"],
+//    ["literal U+2028", literalLineSeparator, "A\u2028B"],
+//    ["literal U+2029", literalParagraphSeparator, "A\u2029B"],
+//    ["maximum code point", escapedCodePoint, String.fromCodePoint(0x10FFFF)],
+//    ["tagged invalid escape", taggedInvalidEscape, "\\xZZ"],
+//];
+//
+//for (const [label, actual, expected] of checks) {
+//    if (actual !== expected) {
+//        throw new Error(`${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+//    }
+//}
+//
+//console.log(`PASS: ${checks.length} string/template/regex value assertions`);
 
-// Unterminated template interpolation:
-let invalid7 = `Value: ${name;
-
-// Unterminated nested template:
-let invalid8 = `Outer ${`Inner template};
-
-// Unterminated string inside template interpolation:
-let invalid9 = `Value: ${"unfinished};
-
-// Unterminated template with multiline content:
-let invalid10 = `First line
-Second line
+let template1 = `Hello, JavaScript!;
