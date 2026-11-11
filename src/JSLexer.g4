@@ -311,20 +311,37 @@ COMMA               : ',' ;
 // مطابق لمعيار ECMAScript 2025 - Clause 12.7
 // ============================================================
 
+// Unicode Escape Sequence
+fragment UNICODE_ESCAPE_SEQUENCE
+    : '\\' 'u' (
+          HEX_DIGIT HEX_DIGIT HEX_DIGIT HEX_DIGIT
+        | '{' HEX_DIGIT+ '}'
+      )
+    ;
+
+// Hexadecimal digit
+fragment HEX_DIGIT
+    : [0-9a-fA-F]
+    ;
+
+// Identifier
 IDENTIFIER
     : IDENTIFIER_START IDENTIFIER_PART*
     ;
 
+// Private Identifier
 PRIVATE_IDENTIFIER
     : '#' IDENTIFIER_START IDENTIFIER_PART*
     ;
 
 fragment IDENTIFIER_START
     : [$_\p{ID_Start}]
+    | UNICODE_ESCAPE_SEQUENCE
     ;
 
 fragment IDENTIFIER_PART
     : [$_\p{ID_Continue}\u200C\u200D]
+    | UNICODE_ESCAPE_SEQUENCE
     ;
 
 // ============================================================
