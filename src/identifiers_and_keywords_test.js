@@ -1,14 +1,8 @@
 
-// ============================================================
 // SECTION 2: IDENTIFIERS & KEYWORDS
-// JavaScript ECMAScript 2025
-// Reference: MDN - JavaScript Lexical Grammar
-// ============================================================
 
 
-// ============================================================
-// 1. BASIC IDENTIFIERS
-// ============================================================
+//  ------ BASIC IDENTIFIERS ---
 
 // Test 1: Simple identifiers
 name;
@@ -39,9 +33,7 @@ $_name;
 _$value;
 
 
-// ============================================================
-// 2. IDENTIFIER BOUNDARIES
-// ============================================================
+// -----IDENTIFIER BOUNDARIES
 
 // Test 5: Similar names must remain separate identifiers
 variable;
@@ -64,9 +56,7 @@ Student;
 STUDENT;
 
 
-// ============================================================
-// 3. UNICODE IDENTIFIERS
-// ============================================================
+// ------ NICODE IDENTIFIERS ----
 
 // Test 7: Identifiers using non-ASCII letters
 café;
@@ -88,18 +78,15 @@ café2025;
 á;
 évalue;
 
-// Test 10: Zero Width Non-Joiner (U+200C)
-// The identifier below contains an invisible ZWNJ character:
+// Test 10: Zero Width Non-Joiner (U+200C): The identifier below contains an invisible ZWNJ character:
 user‌name;
 
-// Test 11: Zero Width Joiner (U+200D)
-// The identifier below contains an invisible ZWJ character:
+// Test 11: Zero Width Joiner (U+200D): he identifier below contains an invisible ZWJ character:
 user‍name;
 
 
-// ============================================================
-// 4. UNICODE ESCAPE SEQUENCES IN IDENTIFIERS
-// ============================================================
+// -------. UNICODE ESCAPE SEQUENCES IN IDENTIFIERS
+
 
 // Test 12: Four-digit Unicode escape
 var \u0061 = 10;
@@ -118,9 +105,7 @@ var user\u004Eame = 40;
 var els\u{65} = 50;
 
 
-// ============================================================
-// 5. PRIVATE IDENTIFIERS
-// ============================================================
+// ---- PRIVATE IDENTIFIERS
 
 // Test 17: Private identifiers
 #privateField;
@@ -140,9 +125,7 @@ class Example {
 }
 
 
-// ============================================================
-// 6. RESERVED KEYWORDS
-// ============================================================
+// --- RESERVED KEYWORDS
 
 // Test 19: Control flow keywords
 break;
@@ -192,9 +175,8 @@ debugger;
 with;
 
 
-// ============================================================
-// 7. CONTEXTUAL KEYWORDS & IDENTIFIERS WITH SPECIAL MEANINGS
-// ============================================================
+
+// ----- CONTEXTUAL KEYWORDS & IDENTIFIERS WITH SPECIAL MEANINGS
 
 // Test 26: Contextual keywords
 async;
@@ -215,9 +197,7 @@ target;
 meta;
 
 
-// ============================================================
 // 8. FUTURE RESERVED WORDS
-// ============================================================
 
 // Test 29: Always reserved future keyword
 enum;
@@ -249,9 +229,7 @@ transient;
 volatile;
 
 
-// ============================================================
 // 9. BOOLEAN & NULL LITERALS
-// ============================================================
 
 // Test 32: Boolean literals
 true;
@@ -264,9 +242,7 @@ null;
 undefined;
 
 
-// ============================================================
 // 10. IDENTIFIERS IN REAL JAVASCRIPT CODE
-// ============================================================
 
 // Test 35: Variable declarations
 var firstName;
@@ -298,8 +274,3 @@ if (total >= 50) {
 // Test 40: Unicode identifiers in declarations
 var اسم = "Masa";
 var 学生 = "Student";
-
-
-// ============================================================
-// END OF SECTION 2
-// ============================================================
