@@ -24,6 +24,7 @@ let double7 = "Special characters: @#$%^&*()";
 
 
 
+// SPECIAL CASE
 // Test 3. Escape Sequences
 
 let escape1 = 'New line: \n';
@@ -44,6 +45,7 @@ let escape15 = 'Another unknown escape: \z';
 
 
 
+// SPECIAL CASE
 // Test 4. Escaped Quotes and Mixed Quotes
 
 let quote1 = 'It\'s a beautiful day';
@@ -55,6 +57,7 @@ let quote6 = "Multiple \" escaped \" quotes";
 
 
 
+// SPECIAL CASE
 // Test 5. Line Continuation
 
 let continuation1 = "This is the first line \
@@ -68,6 +71,7 @@ second line";
 
 
 
+// SPECIAL CASE
 // Test 6. Multiline Template Literals
 
 let template1 = `Hello, JavaScript!`;
@@ -84,6 +88,7 @@ let template6 = `Single quote: ' and double quote: "`;
 
 
 
+// SPECIAL CASE
 // Test 7. Template Literal Interpolation
 
 let name = "Mohammad";
@@ -107,6 +112,7 @@ let interpolation10 = `Conditional: ${age >= 18 ? "Adult" : "Minor"}`;
 
 
 
+// SPECIAL CASE
 // Test 8. Nested Template Literals
 
 let nested1 = `Outer ${`Inner template`}`;
@@ -116,6 +122,7 @@ let nested2 = `Result: ${`Value = ${10 + 5}`}`;
 let nested3 = `Outer text ${`Inner ${name}`} outer text`;
 
 
+// SPECIAL CASE
 // Test 9. Escaped Characters in Template Literals
 
 let templateEscape1 = `Escaped backtick: \``;
@@ -128,6 +135,7 @@ let templateEscape7 = `Code point: \u{1F600}`;
 
 
 
+// SPECIAL CASE
 // Test 10. Template Literals with Complex Expressions
 
 let complex1 = `Sum: ${10 + 20 + 30}`;
@@ -144,6 +152,7 @@ let complex6 = `String inside expression: ${"Hello ${name}"}`;
 
 
 
+// SPECIAL CASE
 // Test 11. Empty and Boundary Cases
 
 let boundary1 = '';
@@ -159,6 +168,7 @@ let boundary8 = `\t`;
 
 
 
+// SPECIAL CASE
 // Test 12. Template boundaries: strings, comments, functions, and nesting
 
 let braceString = `Value: ${"}"} tail`;
@@ -173,6 +183,7 @@ let dollarText = `$ $$ $name ${4} $`;
 let escapedThenReal = `\${name}: ${name}`;
 
 
+// SPECIAL CASE
 // Test 13. Regex literals and division inside interpolation
 
 let regexClosingBrace = `Match: ${/}/.test("}")} tail`;
@@ -182,6 +193,7 @@ let regexBacktick = `Match: ${/`/.test("`")} tail`;
 let division = `Value: ${12 / 3 / 2} tail`;
 
 
+// SPECIAL CASE
 // Test 14. Valid escapes and literal Unicode line/paragraph separators (U+2028 and U+2029)
 
 let literalLineSeparator = "A B";
@@ -190,6 +202,7 @@ let escapedCodePoint = "\u{10FFFF}";
 let taggedInvalidEscape = String.raw`\xZZ`;
 
 
+// SPECIAL CASE
 // Test 15. Unterminated Template Literal
 
 let template1 = `Hello, JavaScript!;
