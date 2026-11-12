@@ -59,7 +59,7 @@ let logical3 = !true;
 let logical4 = (a > 5) && (b < 10);
 let logical5 = (a === 10) || (b === 0);
 
-
++
 // 5. Bitwise Operators
 
 let bit1 = 5 & 3;
@@ -261,11 +261,6 @@ let punctuators = [
 ];
 
 
-// -----------------------------------------------------------------------------
-// 20. Invalid / Malformed Operator Cases
-// Keep these at the end. Some are invalid JavaScript syntax,
-// but they are useful for checking lexical recognition.
-// -----------------------------------------------------------------------------
 
 let invalid1 = @;
 let invalid2 = #;
