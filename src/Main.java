@@ -24,13 +24,12 @@ public class Main {
         System.out.println("--- Tokens Found ---");
 
         for (Token token : tokens.getTokens()) {
-            // تجاهل EOF
             if (token.getType() == Token.EOF) continue;
 
             String tokenName = lexer.getVocabulary().getSymbolicName(token.getType());
             String text      = token.getText();
             int    line      = token.getLine();
-            int    col       = token.getCharPositionInLine() + 1; // +1 عشان يبدأ من 1
+            int    col       = token.getCharPositionInLine() + 1;
 
             String errorMessage = switch (token.getType()) {
                 case JSLexer.UNTERMINATED_STRING -> "Unterminated string";
